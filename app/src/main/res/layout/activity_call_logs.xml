@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:background="@android:color/black"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/callLogsTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📞 Call History"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/white"
+        android:layout_marginBottom="12dp" />
+
+    <!-- ⭐ Dropbox Upload Button -->
+    <TextView
+        android:id="@+id/uploadCallBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sync Call Logs to Dropbox"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:gravity="center"
+        android:background="#4CAF50"
+        android:textColor="@android:color/white"
+        android:layout_marginBottom="12dp"/>
+
+    <!-- ⭐ DATE FILTER BAR -->
+    <LinearLayout
+        android:id="@+id/dateFilterBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="10dp"
+        android:background="#202020"
+        android:layout_marginBottom="12dp"
+        android:weightSum="3">
+
+        <TextView
+            android:id="@+id/filterFromDate"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="From"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:padding="10dp"
+            android:background="#333333" />
+
+        <TextView
+            android:id="@+id/filterToDate"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="To"
+            android:textColor="#FFFFFF"
+            android:textSize="15sp"
+            android:padding="10dp"
+            android:layout_marginStart="8dp"
+            android:background="#333333" />
+
+        <TextView
+            android:id="@+id/filterReset"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Reset"
+            android:textColor="#FF5252"
+            android:textSize="15sp"
+            android:padding="10dp"
+            android:gravity="center"
+            android:layout_marginStart="8dp"
+            android:background="#222222" />
+
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:id="@+id/callLogContainer"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+    </ScrollView>
+
+</LinearLayout>

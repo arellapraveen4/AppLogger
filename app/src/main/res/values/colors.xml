@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Theme Colors -->
+    <color name="teal_200">#03DAC5</color>
+    <color name="teal_700">#018786</color>
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- Optional UI Colors -->
+    <color name="primary">#3F51B5</color>
+    <color name="background_light">#F2F2F7</color>
+
+
+    <color name="background_dark">#121212</color>
+    <color name="card_bg">#1E2A38</color>
+    <color name="accent_blue">#00BFA6</color>
+</resources>

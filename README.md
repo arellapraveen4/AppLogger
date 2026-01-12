@@ -1,185 +1,291 @@
 
 
-# 📱 AppLogger – Android App & Call Usage Logger with Dropbox Backup
+# 📱 Smart App Logger – Detailed Project Description
 
-## 🔍 Overview
-**AppLogger** is an Android application developed using **Java** in **Android Studio**, compatible with **Android 15 (API level 35)**.  
-The app automatically monitors **application usage** and **call activity** in the background and stores logs locally as **text (.txt) files**.  
-Users can control logging through a **toggle button**, and the collected logs can later be **uploaded to Dropbox** for secure cloud backup.
+## 1. Project Overview
 
-This project demonstrates background execution, permission handling, and cloud integration under modern Android constraints.
+**Smart App Logger** is an advanced Android system-monitoring application that continuously tracks:
+
+* 📊 **Foreground app usage** (open/close events with duration)
+* 📞 **Call logs** (incoming, outgoing, missed, rejected)
+* 🔔 (Planned/available) **Notifications & message history**
+* ☁️ **Secure cloud backup** using Dropbox
+
+The app runs **reliably in the background**, even on **Android 13–15**, using:
+
+* Foreground Service
+* WorkManager (recursive safe loops)
+* Battery optimization whitelisting
+
+All logs are stored **locally** in text files and can be **viewed, filtered, and uploaded** from the UI.
 
 ---
 
-## 🎯 Project Objectives
-- Automatically track app usage and call logs
-- Run logging tasks in the background
-- Allow user-controlled logging via toggle switch
-- Append logs to local `.txt` files
-- Upload logs to Dropbox cloud storage
-- Ensure compatibility with Android 15 (API 35)
+## 2. High-Level Architecture
 
----
-
-## ✨ Features
-
-### 📊 App Usage Logging
-- Automatically detects app launches and usage duration
-- Records:
-  - Application name
-  - Package name
-  - Start time
-  - End time
-  - Total usage duration
-  - Date
-- Logs are appended continuously to a local text file
-
-**Sample App Usage Log (`app_usage_log.txt`):**
 ```
-
-App Name: WhatsApp
-Package: com.whatsapp
-Start Time: 10:15 AM
-End Time: 10:45 AM
-Usage Duration: 30 minutes
-Date: 02-01-2026
-----------------
-
+MainActivity
+   │
+   ├── UsageMonitorService (Foreground)
+   │       ├── UsageWorker (App usage tracking)
+   │       └── CallLogWorker (Call log backup)
+   │
+   ├── AppUsageActivity (UI + Live updates)
+   ├── CallLogsActivity (UI + filters)
+   └── Dropbox Cloud Backup
 ```
 
 ---
 
-### 📞 Call Usage Logging
-- Automatically logs phone call activity
-- Captures:
-  - Call type (Incoming / Outgoing / Missed)
-  - Phone number (masked if required)
-  - Call start time
-  - Call end time
-  - Call duration
-  - Date
-- Logs are appended to a separate text file
+## 3. MainActivity – Control Center
 
-**Sample Call Log (`call_usage_log.txt`):**
+### Purpose
+
+Acts as the **dashboard** and **control panel** of the app.
+
+### Key Features
+
+#### 🔘 Master Switch
+
+* Starts/stops **UsageMonitorService**
+* Saves state using `SharedPreferences`
+* Automatically requests:
+
+  * Usage Access permission
+  * Notification permission
+  * Battery optimization exemption
+
+#### 🧩 Feature Cards
+
+Each card opens a dedicated module:
+
+* App Usage Logs
+* Call Logs
+* Message Logs
+* Notification History
+
+#### 🔋 Battery Optimization Handling
+
+```java
+ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
 ```
 
-Call Type: Incoming
-Phone Number: +91XXXXXXXXXX
-Start Time: 3:02 PM
-Duration: 5 min 20 sec
-Date: 02-01-2026
-----------------
+Ensures background logging is **not killed by the system**.
 
+---
+
+## 4. UsageMonitorService – Background Engine
+
+### Why a Foreground Service?
+
+Android aggressively kills background tasks.
+Running as a **foreground service** ensures:
+
+* Continuous logging
+* Higher priority
+* System visibility via notification
+
+### What it does
+
+On creation:
+
+* Starts **UsageWorker**
+* Starts **CallLogWorker**
+* Shows persistent notification:
+
+  > “Smart Logger Running – Tracking App Usage & Call Logs”
+
+---
+
+## 5. UsageWorker – App Usage Tracking (Core Logic)
+
+### How app usage is detected
+
+Uses:
+
+```java
+UsageStatsManager + UsageEvents
+```
+
+It detects:
+
+* `MOVE_TO_FOREGROUND`
+* `ACTIVITY_RESUMED`
+
+### Logic Flow
+
+1. Get **current foreground app**
+2. Compare with **last saved app**
+3. If changed:
+
+   * Close previous app (calculate duration)
+   * Log close event
+   * Log new app open event
+
+### Example Log Entry
+
+```
+[2026-01-12 10:41:02] Instagram opened
+[2026-01-12 10:43:10] Instagram closed (2m 8s)
+```
+
+### Smart Features
+
+* 🚫 Ignores system apps & itself
+* ⏱️ Debounce window (prevents spam logs)
+* 🔁 Recursive WorkManager loop (Android 15 safe)
+* 📢 Sends live broadcast to UI
+
+---
+
+## 6. AppUsageActivity – Live App Usage UI
+
+### What this screen does
+
+* Reads `AppUsageLog.txt`
+* Displays logs in a RecyclerView
+* Updates **in real time** using BroadcastReceiver
+
+### Key Features
+
+#### 📅 Date Filter
+
+* Pick any date
+* Shows only logs from that day
+
+#### 🔄 Live Updates
+
+When `UsageWorker` logs an event:
+
+```java
+sendBroadcast(ACTION_LOG_ADDED)
+```
+
+UI instantly updates **without reload**
+
+#### 👤 Contact Name Resolution
+
+If the “app name” is actually a number:
+
+* Resolves it using `ContactsContract`
+* Displays contact name instead of raw number
+
+#### ☁️ Dropbox Upload
+
+Uploads logs securely using:
+
+```http
+POST https://content.dropboxapi.com/2/files/upload
 ```
 
 ---
 
-### 🔄 Background Logging (Automatic)
-- Logging runs automatically in the background
-- Uses:
-  - Foreground/background services
-  - System event listeners
-- Continues even when the app is minimized
-- Optimized for Android 15 background execution limits
+## 7. CallLogWorker – Background Call Logger
 
----
+### What it does
 
-### 🎚️ Toggle Button Control
-- A toggle button allows the user to:
-  - ▶️ Start logging
-  - ⏹️ Stop logging
-- When OFF:
-  - No data is collected
-- When ON:
-  - App usage and call logs are recorded automatically
+* Periodically checks device call logs
+* Stores **only new calls**
+* Prevents duplicate entries using last saved call ID
 
-This ensures transparency and user control.
+### Example Entry Format
 
----
-
-### 💾 Local Storage (TXT Files)
-- Logs are stored as **plain `.txt` files**
-- Data is appended (no overwriting)
-- Files are saved in app’s internal storage
-- Example files:
-  - `app_usage_log.txt`
-  - `call_usage_log.txt`
-
----
-
-### ☁️ Dropbox Cloud Upload
-- User authenticates Dropbox account
-- Local log files are uploaded on demand
-- Ensures safe backup and remote access
-- Logs remain available even after app uninstall or device change
-
----
-
-## 🔐 Permissions Used
-
-| Permission | Purpose |
-|----------|---------|
-| Usage Access | Monitor app usage |
-| READ_CALL_LOG | Read call history |
-| READ_PHONE_STATE | Detect call state |
-| FOREGROUND_SERVICE | Run background logging |
-| INTERNET | Upload logs to Dropbox |
-
-> All permissions are requested explicitly and used only when logging is enabled.
-
----
-
-## 🏗️ Technology Stack
-- **Language:** Java
-- **IDE:** Android Studio
-- **Target SDK:** Android 15 (API 35)
-- **Components Used:**
-  - Services (Foreground & Background)
-  - Broadcast Receivers
-  - UsageStatsManager
-  - Call Log Content Provider
-  - File I/O (Append Mode)
-  - Dropbox REST API
-
----
-
-## 🚀 Application Workflow
-1. User installs and opens the app
-2. Required permissions are granted
-3. User enables logging using toggle button
-4. Background service starts automatically
-5. App and call usage data is logged to `.txt` files
-6. User uploads logs to Dropbox when required
-
----
-
-## 🧠 Key Learning Outcomes
-- Android background execution in API 35
-- Handling sensitive system permissions
-- Efficient file handling using append mode
-- Cloud integration using third-party APIs
-- User-controlled background processes
-
----
-
-## 🔮 Future Enhancements
-- Encrypt log files before upload
-- Dashboard with usage analytics
-- Auto-scheduled cloud backups
-- Export logs as CSV or PDF
-- Google Drive support
-
----
-
-## 📌 Disclaimer
-This application is developed **strictly for educational purposes**.  
-Users must follow privacy laws and obtain consent before monitoring usage data.
-
----
-
-## 👤 Author
-**Praveen Arella**
-arellapraveen4@gmail.com
-Engineering Student | Android Developer  
 ```
+12345|12 Jan 2026, 10:30 AM|Incoming|9876543210|45
+```
+
+### Why WorkManager?
+
+* Safe execution on Android 12+
+* Survives reboot & background limits
+* Recursive scheduling every 15 seconds
+
+---
+
+## 8. CallLogsActivity – Call Log Viewer
+
+### Features
+
+#### 📞 Live Call Log Display
+
+* Reads directly from device call logs
+* Shows:
+
+  * Contact name
+  * Phone number
+  * Call type
+  * Duration
+  * Contact photo
+
+#### 📆 Date Range Filter
+
+* From date
+* To date
+* Reset filter instantly
+
+#### ☁️ Dropbox Backup
+
+Uploads `CallBackup.txt` securely
+
+---
+
+## 9. Data Storage Strategy
+
+| Data Type | Storage           |
+| --------- | ----------------- |
+| App usage | `AppUsageLog.txt` |
+| Call logs | `CallBackup.txt`  |
+| States    | SharedPreferences |
+| Cloud     | Dropbox API       |
+
+✔ Lightweight
+✔ No database overhead
+✔ Easy export & audit
+
+---
+
+## 10. Security & Permissions Used
+
+* `PACKAGE_USAGE_STATS`
+* `READ_CALL_LOG`
+* `READ_CONTACTS`
+* Foreground service permission
+* Battery optimization exemption
+
+> Permissions are **explicitly requested** and **user-controlled**
+
+---
+
+## 11. Why This Project Is Impressive
+
+✅ Uses **system-level Android APIs**
+✅ Handles **Android 15 background restrictions**
+✅ Real-time UI sync with background workers
+✅ Cloud backup integration
+✅ Modular, scalable design
+
+---
+
+## 12. How You Can Describe This in Interviews
+
+> “I built a Smart App Logger that tracks foreground app usage and call logs in real time using UsageStatsManager, WorkManager, and a foreground service. It safely runs on Android 15, logs app open/close durations, syncs data live to the UI, and supports secure cloud backups using Dropbox.”
+
+---
+
+## 13. Important Note (Very Honest)
+
+This project is:
+
+* ✔ **System monitoring**
+* ✔ **Digital forensics**
+* ✔ **Parental control / usage analytics**
+* ✔ **Cybersecurity-adjacent**
+
+⚠️ **NOT malware** if:
+
+* User consent is taken
+* Permissions are transparent
+* No hidden exfiltration
+
+---
 
